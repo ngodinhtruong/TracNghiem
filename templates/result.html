@@ -1,0 +1,74 @@
+{% extends 'layouts/base_layout.html' %}
+
+{% block title %}Kết quả{% endblock %}
+
+{% block back_button %}{{ super() }}{% endblock %}
+
+{% block content %}
+{{ super() }}
+<div class="container mx-auto px-4">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-8">
+        <h1 class="text-2xl font-bold text-center mb-8">Kết quả bài làm</h1>
+        
+        <div class="space-y-6">
+            <!-- Điểm số -->
+            <div class="text-center">
+                <div class="text-5xl font-bold text-blue-600 mb-2">{{ score }}/{{ total }}</div>
+                <div class="text-gray-600">Số câu đúng trên tổng số câu</div>
+            </div>
+
+            <!-- Thống kê chi tiết -->
+            <div class="bg-blue-50 rounded-xl p-6 space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Số câu đã làm:</span>
+                    <span class="font-medium">{{ answered_count }}/{{ total }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Số câu đúng:</span>
+                    <span class="font-medium text-green-600">{{ score }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Số câu sai:</span>
+                    <span class="font-medium text-red-600">{{ answered_count - score }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Số câu chưa làm:</span>
+                    <span class="font-medium text-gray-600">{{ total - answered_count }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Tỷ lệ đúng:</span>
+                    <span class="font-medium">{{ "%.1f"|format(score/answered_count*100 if answered_count > 0 else 0) }}%</span>
+                </div>
+            </div>
+
+            <!-- Nút điều hướng -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+                <a href="{{ url_for('menu') }}" 
+                   class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors text-center">
+                    <i class="fas fa-home mr-2"></i>Về trang chủ
+                </a>
+                <a href="{{ url_for('review_wrong_answers', class_id=class_id, topic_id=topic_id) }}" 
+                   class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center">
+                    <i class="fas fa-sync-alt mr-2"></i>Ôn tập câu sai
+                </a>
+                <a href="{{ url_for('quiz', class_id=class_id, topic_id=topic_id) }}" 
+                   onclick="clearQuizSession(event)"
+                   class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors text-center">
+                    <i class="fas fa-redo mr-2"></i>Làm lại
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function clearQuizSession(event) {
+    event.preventDefault();
+    // Xóa session data
+    fetch('/menu').then(() => {
+        // Sau khi xóa session, chuyển hướng đến trang quiz
+        window.location.href = event.target.href;
+    });
+}
+</script>
+{% endblock %} 

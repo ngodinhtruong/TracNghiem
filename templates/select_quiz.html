@@ -1,0 +1,78 @@
+{% extends 'layouts/base_layout.html' %}
+{% block title %}Chọn lớp & chủ đề{% endblock %}
+
+{% block content %}
+<div x-data="{ showModal: false, topics: [], className: '', classId: null }">
+    <!-- Header lớn -->
+    <div class="flex flex-col items-center mt-12 mb-6">
+        <div class="flex items-center gap-4 mb-2">
+            <span class="text-4xl text-blue-600"><i class="fas fa-graduation-cap"></i></span>
+            <h1 class="text-4xl font-extrabold tracking-tight text-blue-800 drop-shadow">Chọn lớp & chủ đề</h1>
+        </div>
+        <div class="text-lg text-gray-500 text-center max-w-2xl">Hãy chọn lớp bạn muốn luyện tập. Sau đó, chọn chủ đề để xem thống kê hoặc bắt đầu làm bài!</div>
+    </div>
+    <!-- Nút quay về menu dưới header, căn trái, tách biệt -->
+    <div class="max-w-5xl mx-auto mb-4 flex justify-start">
+        <a href="/menu" class="bg-white/90 border border-blue-200 shadow-lg rounded-full px-5 py-2 flex items-center gap-2 text-blue-700 font-semibold hover:bg-blue-50 transition backdrop-blur">
+            <i class="fa-solid fa-arrow-left"></i> <span>Quay về menu</span>
+        </a>
+    </div>
+
+    <!-- Danh sách lớp nhỏ, sát top -->
+    <div class="w-full max-w-5xl mx-auto mb-10">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
+            {% for c in classes %}
+            <button
+                class="bg-gradient-to-br from-blue-50 to-blue-200 hover:from-blue-100 hover:to-blue-300 text-blue-800 font-bold rounded-xl shadow p-5 text-base flex flex-col items-center gap-2 transition hover:scale-105 border-2 border-transparent hover:border-blue-400 focus:outline-none"
+                @click="
+                    showModal = true;
+                    className = '{{ c.name }}';
+                    classId = {{ c.id }};
+                    fetch('/topics?class_id={{ c.id }}')
+                      .then(res => res.json())
+                      .then(data => topics = data.topics);
+                ">
+                <i class="fa-solid fa-users text-2xl mb-1"></i>
+                {{ c.name }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Modal chọn chủ đề -->
+    <div x-show="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 sm:p-10 w-full max-w-md sm:max-w-xl md:max-w-2xl relative flex flex-col items-center transition-all duration-300"
+             :class="{'max-w-md': topics.length <= 4, 'max-w-xl': topics.length > 4 && topics.length <= 8, 'max-w-2xl': topics.length > 8}">
+            <button class="absolute top-4 right-5 text-gray-400 hover:text-blue-600 text-3xl" @click="showModal = false">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center gap-2 mb-4 mt-2">
+                <span class="text-2xl text-blue-600"><i class="fa-solid fa-book-open"></i></span>
+                <h2 class="text-2xl font-bold text-blue-700">Chủ đề lớp <span x-text="className"></span></h2>
+            </div>
+            <!-- Danh sách chủ đề dạng ma trận -->
+            <div class="w-full flex justify-center">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 place-items-center min-h-[180px] max-h-80 overflow-y-auto pr-2 w-full">
+                    <template x-for="topic in topics" :key="topic.id">
+                        <a :href="`/quiz_stats?class_id=${classId}&topic_id=${topic.id}`"
+                           class="block bg-gradient-to-br from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-400 text-blue-800 font-semibold rounded-xl shadow p-4 text-center transition-all duration-150 cursor-pointer border-2 border-transparent hover:border-blue-400 w-full min-w-[120px] min-h-[70px] flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-book text-xl mb-1 text-blue-500"></i>
+                            <span class="text-base font-semibold" x-text="topic.name"></span>
+                        </a>
+                    </template>
+                    <!-- Nếu số chủ đề không chia hết cho số cột, thêm ô trống để căn đều -->
+                    <template x-if="topics.length > 0 && topics.length % 2 !== 0">
+                        <div class="hidden sm:block"></div>
+                    </template>
+                </div>
+            </div>
+            <template x-if="topics.length === 0">
+                <div class="flex flex-col items-center justify-center mt-8 mb-4">
+                    <span class="text-5xl text-gray-300 mb-2"><i class="fa-solid fa-face-smile"></i></span>
+                    <div class="text-gray-500 text-center font-semibold">Không có chủ đề nào cho lớp này.<br>Hãy thêm chủ đề để bắt đầu luyện tập!</div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+{% endblock %} 

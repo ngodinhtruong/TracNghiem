@@ -1,0 +1,60 @@
+{% extends 'layouts/base_layout.html' %}
+{% block title %}Menu{% endblock %}
+{% block back_button %}{% endblock %}
+{% block content %}
+{{ super() }}
+<div class="container mx-auto px-4">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-12">
+            <i class="fas fa-graduation-cap text-blue-600"></i>
+            <span class="ml-3">Hệ thống học tập</span>
+        </h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Làm bài tập -->
+            <a href="{{ url_for('quiz_select') }}" class="group">
+                <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <div class="text-3xl text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-pencil-alt"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold mb-2">Làm bài tập</h2>
+                    <p class="text-gray-600">Làm bài tập theo chủ đề</p>
+                </div>
+            </a>
+
+            <!-- Lịch sử làm bài -->
+            <!-- <a href="{{ url_for('history') }}" class="group">
+                <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <div class="text-3xl text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold mb-2">Lịch sử làm bài</h2>
+                    <p class="text-gray-600">Xem lịch sử và thống kê</p>
+                </div>
+            </a> -->
+
+            <!-- Thêm câu hỏi -->
+            <a href="{{ url_for('read_file') }}" class="group">
+                <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <div class="text-3xl text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold mb-2">Thêm câu hỏi</h2>
+                    <p class="text-gray-600">Tải lên file câu hỏi mới</p>
+                </div>
+            </a>
+
+            <!-- Chỉnh sửa câu hỏi -->
+            <a href="{{ url_for('edit_questions_select') }}" class="group">
+                <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <div class="text-3xl text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold mb-2">Chỉnh sửa câu hỏi</h2>
+                    <p class="text-gray-600">Sửa nội dung câu hỏi</p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

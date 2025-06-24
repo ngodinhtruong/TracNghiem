@@ -1,0 +1,191 @@
+{% extends "layouts/quiz_layout.html" %}
+
+{% block title %}Làm bài tập{% endblock %}
+
+{% block head %}
+<script>
+function checkAnswer(questionId, selectedLabel, el) {
+    fetch(`/check_answer?qid=${questionId}&label=${selectedLabel}&class_id={{ selected_class }}&topic_id={{ selected_topic }}`)
+        .then(res => res.json())
+        .then(data => {
+            // Xóa trạng thái cũ
+            document.querySelectorAll(`[data-question-id='${questionId}']`).forEach(opt => {
+                opt.classList.remove('bg-green-500','bg-red-500','text-white','ring-2','ring-green-400','ring-red-400');
+                opt.classList.add('bg-white','text-blue-600');
+            });
+            // Nếu đúng
+            if (data.correct) {
+                el.classList.remove('bg-white','text-blue-600');
+                el.classList.add('bg-green-500','text-black','ring-2','ring-green-400');
+            } else {
+                el.classList.remove('bg-white','text-blue-600');
+                el.classList.add('bg-red-500','text-black','ring-2','ring-red-400');
+                // Hiện đáp án đúng
+                document.querySelectorAll(`[data-question-id='${questionId}'][data-label='${data.correct_label}']`).forEach(opt => {
+                    opt.classList.remove('bg-white','text-blue-600');
+                    opt.classList.add('bg-green-500','text-black','ring-2','ring-green-400');
+                });
+            }
+            // Disable tất cả radio của câu này
+            document.querySelectorAll(`input[name='q${questionId}']`).forEach(r => r.disabled = true);
+            // Cập nhật màu cho ma trận
+            updateMatrixColor(questionId, data.correct);
+        });
+}
+
+function updateMatrixColor(questionId, isCorrect) {
+    const matrixItem = document.getElementById(`matrix-${questionId}`);
+    if (matrixItem) {
+        matrixItem.classList.remove('bg-white', 'text-blue-700', 'bg-green-500', 'bg-red-500', 'text-white');
+        if (isCorrect) {
+            matrixItem.classList.add('bg-green-500', 'text-white', 'border-green-600');
+        } else {
+            matrixItem.classList.add('bg-red-500', 'text-white', 'border-red-600');
+        }
+    }
+}
+
+// Cảnh báo khi thoát trang khi đang làm bài
+let isQuizDirty = true;
+// Hiện popup custom khi back
+let pendingBack = false;
+window.addEventListener('popstate', function (e) {
+    if (isQuizDirty && !pendingBack) {
+        e.preventDefault && e.preventDefault();
+        showExitModal();
+        history.pushState(null, '', window.location.href); // Đẩy lại để ngăn back
+    }
+});
+
+function showExitModal() {
+    document.getElementById('exit-modal').classList.remove('hidden');
+}
+
+function hideExitModal() {
+    document.getElementById('exit-modal').classList.add('hidden');
+}
+
+function confirmExitQuiz() {
+    isQuizDirty = false;
+    pendingBack = true;
+    window.location.href = '/submit?class_id={{ selected_class }}&topic_id={{ selected_topic }}&page={{ page }}';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    let form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            isQuizDirty = false;
+        });
+    }
+});
+</script>
+{% endblock %}
+
+{% block quiz_content %}
+<div class="flex flex-col lg:flex-row gap-8">
+    <!-- Left: Form làm bài -->
+    <div class="flex-1">
+        {% if questions %}
+        <form method="post" action="/submit?class_id={{ selected_class }}&topic_id={{ selected_topic }}&page={{ page }}">
+            <div class="flex flex-col gap-8">
+            {% for q in questions %}
+            {% set ans = answered_questions.get(q.id|string) %}
+            {% set correct_label = q.correct_label %}
+            <div class="question-box mb-8 p-6 bg-blue-50 rounded-2xl shadow-lg w-full" id="q{{ q.id }}">
+                <div class="flex items-center gap-4 mb-3 min-h-[48px]">
+                    <div class="flex items-center justify-center px-4 py-1 rounded-lg bg-blue-600 text-white font-bold text-lg h-10 w-14">{{ loop.index + (page-1)*7 }}</div>
+                    <p class="font-semibold text-lg flex-1">{{ q.question }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-3 mt-2">
+                    {% for k, v in q.options.items() %}
+                    {% set is_checked = (ans == k) %}
+                    <label class="block cursor-pointer group">
+                        <input type="radio" name="q{{ q.id }}" value="{{ k }}" class="peer hidden" onclick="checkAnswer({{ q.id }}, '{{ k }}', this.nextElementSibling)" {% if ans %}disabled{% endif %} {% if is_checked %}checked{% endif %}>
+                        <div class="flex items-center gap-2 px-4 py-3 rounded-xl border border-blue-200 bg-white shadow-sm group-hover:bg-blue-100 transition font-medium text-blue-600"
+                             data-question-id="{{ q.id }}" data-label="{{ k }}"
+                             {% if ans %}
+                                {% if is_checked and k == correct_label %}
+                                    style="background-color: #22c55e; color: #000; border-color: #22c55e;"
+                                {% elif is_checked and k != correct_label %}
+                                    style="background-color: #ef4444; color: #000; border-color: #ef4444;"
+                                {% elif k == correct_label and ans != correct_label %}
+                                    style="background-color: #22c55e; color: #000; border-color: #22c55e;"
+                                {% endif %}
+                             {% endif %}
+                        >
+                            <span class="inline-block w-7 h-7 rounded-full border border-blue-400 flex items-center justify-center font-bold mr-2 bg-blue-50 group-hover:bg-blue-200">{{ abcd[loop.index0] }}</span>
+                            <span>{{ v }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            </div>
+        </form>
+        <div class="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            {% if page > 1 %}
+                <a href="/quiz?class_id={{ selected_class }}&topic_id={{ selected_topic }}&page={{ page-1 }}" class="text-blue-600 hover:underline">&laquo; Trang trước</a>
+            {% else %}
+                <span></span>
+            {% endif %}
+            <span>Trang {{ page }}/{{ total_pages }}</span>
+            {% if page < total_pages %}
+                <a href="/quiz?class_id={{ selected_class }}&topic_id={{ selected_topic }}&page={{ page+1 }}" class="text-blue-600 hover:underline">Trang sau &raquo;</a>
+            {% else %}
+                <span></span>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-gray-500 mt-10">Không có câu hỏi nào cho chủ đề này!</div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Ma trận số câu hỏi -->
+    <div class="w-full lg:w-64 flex-shrink-0">
+        <div class="sticky top-24 bg-blue-100 rounded-2xl shadow p-4">
+            <div class="font-bold text-blue-700 mb-3 text-center">Ma trận câu hỏi</div>
+            <div class="grid grid-cols-5 gap-2">
+                {% for idx in range(1, total_questions+1) %}
+                    {% set qid = question_ids[idx-1] %}
+                    {% set matrix_id = 'matrix-' ~ qid %}
+                    {% set correct_label = correct_labels[qid|string] %}
+                    {% set user_ans = answered_questions.get(qid|string) %}
+                    {% set is_correct = question_results.get(qid|string) %}
+                    {% set matrix_color = '' %}
+                    {% if user_ans %}
+                        {% if is_correct %}
+                            {% set matrix_color = 'bg-green-500 text-white border-green-600' %}
+                        {% else %}
+                            {% set matrix_color = 'bg-red-500 text-white border-red-600' %}
+                        {% endif %}
+                    {% else %}
+                        {% set matrix_color = 'bg-white text-blue-700' %}
+                    {% endif %}
+                    <a id="{{ matrix_id }}" href="/quiz?class_id={{ selected_class }}&topic_id={{ selected_topic }}&page={{ ((idx-1)//7)+1 }}#q{{ qid }}"
+                       class="block text-center rounded-lg px-0 py-2 font-semibold border border-blue-300 hover:bg-blue-200 transition {{ matrix_color }} {% if ((idx-1)//7)+1 == page %}ring-2 ring-blue-400{% endif %}">
+                        {{ idx }}
+                    </a>
+                {% endfor %}
+            </div>
+            <!-- Thêm nút nộp bài ở đây -->
+            {% if questions %}
+            <button type="button" onclick="document.querySelector('form').submit();" class="w-full bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition text-lg mt-6">Nộp bài</button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận thoát -->
+<div id="exit-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Xác nhận thoát?</h3>
+        <p class="text-gray-600 mb-6">Bạn có chắc muốn thoát? Các câu trả lời sẽ được lưu lại.</p>
+        <div class="flex justify-end gap-4">
+            <button onclick="hideExitModal()" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Hủy</button>
+            <button onclick="confirmExitQuiz()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Xác nhận</button>
+        </div>
+    </div>
+</div>
+{% endblock %} 

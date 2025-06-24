@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Sửa câu hỏi{% endblock %}
+{% block back_button %}
+<a href="/menu" class="fixed top-6 left-6 z-50 bg-white/90 border border-blue-200 shadow-lg rounded-full px-5 py-2 flex items-center gap-2 text-blue-700 font-semibold hover:bg-blue-50 transition backdrop-blur">
+    <i class="fa-solid fa-arrow-left"></i> <span>Quay về menu</span>
+</a>
+{% endblock %}
+{% block head %}
+{{ super() }}
+<script>
+let isDirty = false;
+window.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('edit-form');
+    if (form) {
+        form.addEventListener('input', () => { isDirty = true; });
+        form.addEventListener('submit', () => { isDirty = false; });
+    }
+    window.addEventListener('beforeunload', function (e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+});
+</script>
+<style>
+#offcanvas-menu {
+    transition: right 0.3s;
+}
+#offcanvas-menu.closed {
+    right: -320px;
+}
+#offcanvas-menu.open {
+    right: 0;
+}
+</style>
+{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-blue-700 text-center mt-8 mb-4">Sửa câu hỏi</h1>
+<div class="flex justify-center items-center min-h-[80vh] w-full">
+<div class="max-w-6xl w-full bg-white bg-opacity-90 rounded-3xl shadow-xl p-4 sm:p-8 flex flex-col lg:flex-row gap-8 relative">
+    <!-- Left: Form sửa câu hỏi -->
+    <div class="flex-1">
+        <form method="post" id="edit-form" class="flex flex-col gap-8">
+            {% for q in questions %}
+            <div class="bg-blue-50 rounded-xl p-4 shadow" id="q{{ q.id }}">
+                <div class="flex items-center gap-4 mb-3 min-h-[48px]">
+                    <div class="flex items-center justify-center px-4 py-1 rounded-lg bg-blue-600 text-white font-bold text-lg h-10 w-14">{{ loop.index + (page-1)*7 }}</div>
+                    <label class="font-semibold flex-1">Câu {{ loop.index + (page-1)*7 }}:</label>
+                </div>
+                <textarea name="q{{ q.id }}" class="w-full mt-2 rounded-lg border border-blue-200 px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400" rows="2">{{ q.text }}</textarea>
+                <div class="mt-3">
+                    <div class="font-semibold mb-1">Đáp án:</div>
+                    <div class="grid grid-cols-1 gap-2">
+                        {% for opt in q.options %}
+                        <div class="flex items-center gap-3">
+                            <input type="radio" name="correct_{{ q.id }}" value="{{ opt.label }}" id="correct_{{ q.id }}_{{ opt.label }}" {% if opt.is_correct %}checked{% endif %}>
+                            <label for="correct_{{ q.id }}_{{ opt.label }}" class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-200 font-bold">{{ opt.label }}</label>
+                            <input type="text" name="opt{{ opt.id }}" value="{{ opt.text }}" class="flex-1 rounded-lg border border-blue-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </form>
+        <div class="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            {% if page > 1 %}
+                <a href="/edit_questions?class_id={{ class_id }}&topic_id={{ topic_id }}&page={{ page-1 }}" class="text-blue-600 hover:underline">&laquo; Trang trước</a>
+            {% else %}
+                <span></span>
+            {% endif %}
+            <span>Trang {{ page }}/{{ total_pages }}</span>
+            {% if page < total_pages %}
+                <a href="/edit_questions?class_id={{ class_id }}&topic_id={{ topic_id }}&page={{ page+1 }}" class="text-blue-600 hover:underline">Trang sau &raquo;</a>
+            {% else %}
+                <span></span>
+            {% endif %}
+        </div>
+    </div>
+    <!-- Right: Off-canvas menu + ma trận số câu hỏi + nút lưu -->
+    <button id="toggle-menu" type="button" class="fixed top-28 right-2 z-50 bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg lg:hidden" onclick="document.getElementById('offcanvas-menu').classList.toggle('open');document.getElementById('offcanvas-menu').classList.toggle('closed');">
+        <i class="fa-solid fa-bars text-2xl"></i>
+    </button>
+    <div id="offcanvas-menu" class="fixed lg:static top-0 right-0 h-full lg:h-auto w-80 max-w-full bg-blue-100 rounded-l-2xl shadow p-4 flex flex-col items-stretch z-40 closed lg:open" style="min-height: 300px;">
+        <div class="font-bold text-blue-700 mb-3 text-center">Ma trận câu hỏi</div>
+        <div class="grid grid-cols-5 gap-2">
+            {% for idx in range(1, total_questions+1) %}
+                {% set qid = question_ids[idx-1] %}
+                {% set matrix_id = 'matrix-' ~ qid %}
+                {% set page_num = ((idx-1)//7)+1 %}
+                <a id="{{ matrix_id }}" href="/edit_questions?class_id={{ class_id }}&topic_id={{ topic_id }}&page={{ page_num }}#q{{ qid }}"
+                   class="block text-center rounded-lg px-0 py-2 font-semibold border border-blue-300 hover:bg-blue-200 transition bg-white text-blue-700 {% if page_num == page %}ring-2 ring-blue-400{% endif %}">
+                    {{ idx }}
+                </a>
+            {% endfor %}
+        </div>
+        <button type="submit" form="edit-form" class="w-full bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition text-lg mt-6"><i class="fa-solid fa-save"></i> Lưu thay đổi</button>
+    </div>
+</div>
+</div>
+{% endblock %} 

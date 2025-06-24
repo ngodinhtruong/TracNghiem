@@ -1,0 +1,201 @@
+{% extends "layouts/quiz_layout.html" %}
+
+{% block title %}Ôn tập câu sai{% endblock %}
+
+{% block head %}
+<script>
+function checkAnswer(questionId, selectedLabel, el) {
+    fetch(`/check_answer?qid=${questionId}&label=${selectedLabel}&class_id={{ selected_class }}&topic_id={{ selected_topic }}&is_retry=true`)
+        .then(res => res.json())
+        .then(data => {
+            // Xóa trạng thái cũ
+            document.querySelectorAll(`[data-question-id='${questionId}']`).forEach(opt => {
+                opt.classList.remove('bg-green-500','bg-red-500','text-white','ring-2','ring-green-400','ring-red-400');
+                opt.classList.add('bg-white','text-blue-600');
+            });
+            // Nếu đúng
+            if (data.correct) {
+                el.classList.remove('bg-white','text-blue-600');
+                el.classList.add('bg-green-500','text-black','ring-2','ring-green-400');
+                // Ẩn câu hỏi sau 1 giây nếu trả lời đúng
+                setTimeout(() => {
+                    const questionBox = document.getElementById(`q${questionId}`);
+                    questionBox.style.transition = 'all 0.5s ease-out';
+                    questionBox.style.opacity = '0';
+                    questionBox.style.transform = 'translateX(100px)';
+                    setTimeout(() => {
+                        questionBox.style.display = 'none';
+                        // Ẩn nút trong ma trận
+                        const matrixBtn = document.getElementById(`matrix-${questionId}`);
+                        if (matrixBtn) matrixBtn.style.display = 'none';
+                        updateProgress();
+                    }, 500);
+                }, 1000);
+            } else {
+                el.classList.remove('bg-white','text-blue-600');
+                el.classList.add('bg-red-500','text-black','ring-2','ring-red-400');
+                // Hiện đáp án đúng
+                document.querySelectorAll(`[data-question-id='${questionId}'][data-label='${data.correct_label}']`).forEach(opt => {
+                    opt.classList.remove('bg-white','text-blue-600');
+                    opt.classList.add('bg-green-500','text-black','ring-2','ring-green-400');
+                });
+            }
+            // Disable tất cả radio của câu này
+            document.querySelectorAll(`input[name='q${questionId}']`).forEach(r => r.disabled = true);
+            // Cập nhật màu cho ma trận
+            updateMatrixColor(questionId, data.correct);
+        });
+}
+
+function updateMatrixColor(questionId, isCorrect) {
+    const matrixItem = document.getElementById(`matrix-${questionId}`);
+    if (matrixItem) {
+        matrixItem.classList.remove('bg-white', 'text-blue-700', 'bg-green-500', 'bg-red-500', 'text-white');
+        if (isCorrect) {
+            matrixItem.classList.add('bg-green-500', 'text-white', 'border-green-600');
+        } else {
+            matrixItem.classList.add('bg-red-500', 'text-white', 'border-red-600');
+        }
+    }
+}
+
+function updateProgress() {
+    const totalQuestions = document.querySelectorAll('.question-box').length;
+    const hiddenQuestions = document.querySelectorAll('.question-box[style*="display: none"]').length;
+    const progress = ((hiddenQuestions) / totalQuestions) * 100;
+    
+    document.getElementById('progress-bar').style.width = progress + '%';
+    document.getElementById('answered-count').textContent = hiddenQuestions;
+}
+
+function submitReview() {
+    if (confirm('Bạn có chắc chắn muốn nộp bài?')) {
+        // Lấy danh sách câu trả lời
+        const answers = {};
+        document.querySelectorAll('.question-box').forEach(box => {
+            const questionId = box.id.replace('q', '');
+            const isHidden = box.style.display === 'none';
+            answers[questionId] = isHidden; // true nếu đã trả lời đúng (đã ẩn)
+        });
+
+        // Gửi kết quả lên server
+        fetch('/submit_review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                class_id: {{ selected_class }},
+                topic_id: {{ selected_topic }},
+                answers: answers
+            })
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect_url;
+            }
+        });
+    }
+}
+
+// Prevent using browser's back button
+history.pushState(null, null, location.href);
+window.onpopstate = function() {
+    history.go(1);
+};
+
+// Prevent using keyboard shortcuts for navigation
+document.addEventListener('keydown', function(e) {
+    if ((e.altKey || e.metaKey) && (e.keyCode === 37 || e.keyCode === 39)) {
+        e.preventDefault();
+    }
+});
+
+// Initial progress update
+document.addEventListener('DOMContentLoaded', function() {
+    updateProgress();
+});
+</script>
+{% endblock %}
+
+{% block quiz_content %}
+<div class="flex flex-col lg:flex-row gap-8">
+    <!-- Left: Form làm bài -->
+    <div class="flex-1">
+        {% if questions %}
+        <div class="flex flex-col gap-8">
+            {% for q in questions %}
+            <div class="question-box mb-8 p-6 bg-blue-50 rounded-2xl shadow-lg w-full" id="q{{ q.id }}">
+                <div class="flex items-center gap-4 mb-3 min-h-[48px]">
+                    <div class="flex items-center justify-center px-4 py-1 rounded-lg bg-blue-600 text-white font-bold text-lg h-10 w-14">{{ loop.index }}</div>
+                    <p class="font-semibold text-lg flex-1">{{ q.question }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-3 mt-2">
+                    {% for k, v in q.options.items() %}
+                    <label class="block cursor-pointer group">
+                        <input type="radio" name="q{{ q.id }}" value="{{ k }}" class="peer hidden" onclick="checkAnswer({{ q.id }}, '{{ k }}', this.nextElementSibling)">
+                        <div class="flex items-center gap-2 px-4 py-3 rounded-xl border border-blue-200 bg-white shadow-sm group-hover:bg-blue-100 transition font-medium text-blue-600"
+                             data-question-id="{{ q.id }}" data-label="{{ k }}">
+                            <span class="inline-block w-7 h-7 rounded-full border border-blue-400 flex items-center justify-center font-bold mr-2 bg-blue-50 group-hover:bg-blue-200">{{ k }}</span>
+                            <span>{{ v }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-gray-500 mt-10">Không có câu sai nào để ôn tập!</div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Ma trận số câu hỏi -->
+    <div class="w-full lg:w-64 flex-shrink-0">
+        <div class="sticky top-24 bg-blue-100 rounded-2xl shadow p-4">
+            <!-- Progress bar -->
+            <div class="mb-4">
+                <div class="font-bold text-blue-700 mb-2 text-center">Tiến độ ôn tập</div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="mt-2 text-sm text-gray-600 text-right">
+                    Đã làm đúng: <span id="answered-count">0</span>/<span id="total-count">{{ questions|length }}</span>
+                </div>
+            </div>
+
+            <!-- Question matrix -->
+            <div class="font-bold text-blue-700 mb-3 text-center">Ma trận câu hỏi</div>
+            <div class="grid grid-cols-5 gap-2">
+                {% for q in questions %}
+                <button 
+                    id="matrix-{{ q.id }}"
+                    class="block text-center rounded-lg px-0 py-2 font-semibold border border-blue-300 bg-white text-blue-700 hover:bg-blue-200 transition"
+                    onclick="document.getElementById('q{{ q.id }}').scrollIntoView({behavior: 'smooth', block: 'center'})">
+                    {{ loop.index }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <!-- Submit button -->
+            {% if questions %}
+            <button type="button" onclick="submitReview()" class="w-full bg-blue-600 text-white rounded-lg px-6 py-3 font-semibold hover:bg-blue-700 transition text-lg mt-6">
+                Hoàn thành
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận thoát -->
+<div id="exit-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Xác nhận thoát?</h3>
+        <p class="text-gray-600 mb-6">Bạn có chắc muốn thoát? Các câu trả lời sẽ được lưu lại.</p>
+        <div class="flex justify-end gap-4">
+            <button onclick="hideExitModal()" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Hủy</button>
+            <button onclick="confirmExitQuiz()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Xác nhận</button>
+        </div>
+    </div>
+</div>
+{% endblock %} 
