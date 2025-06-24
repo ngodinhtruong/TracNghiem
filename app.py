@@ -78,8 +78,6 @@ def init_db_from_docx(filename, class_name, topic_name):
             db.session.add(option)
     db.session.commit()
 
-# Demo
-questions = read_mcq_from_docx("q1.docx")
 
 
 app = Flask(__name__)
@@ -218,7 +216,10 @@ def login_required_view(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Áp dụng login_required_view cho các route chính
+@app.route('/')
+def root():
+    return redirect(url_for('menu'))
+
 @app.route('/menu')
 @login_required_view
 def menu():
@@ -782,10 +783,6 @@ def quiz_stats():
                          attempt_count=attempt_count,
                          highest_score=round(highest_score),
                          wrong_answers=wrong_answers)
-
-@app.route('/')
-def root():
-    return redirect(url_for('menu'))
 
 def init_db():
     with app.app_context():
