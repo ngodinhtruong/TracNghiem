@@ -1,0 +1,12 @@
+flask==3.0.3
+flask-sqlalchemy==3.1.1
+flask-session==0.5.0
+flask-login==0.6.3
+werkzeug==3.0.3
+python-docx==1.1.2
+re==2023.12.25  # Không cần thêm nếu dùng phiên bản mặc định của Python
+os==2023.12.25  # Không cần thêm nếu dùng phiên bản mặc định của Python
+time==2023.12.25  # Không cần thêm nếu dùng phiên bản mặc định của Python
+random==2023.12.25  # Không cần thêm nếu dùng phiên bản mặc định của Python
+functools==2023.12.25  # Không cần thêm nếu dùng phiên bản mặc định của Python
+gunicorn==23.0.0
